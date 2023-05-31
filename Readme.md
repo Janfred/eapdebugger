@@ -10,7 +10,7 @@ For other OS'es the needed packets may differ.
 ### Installation
 
 ```bash
-apt-get install ruby ruby-dev
+apt-get install ruby ruby-dev libpcap-dev
 gem install semantic_logger
 gem install packetfu
 
