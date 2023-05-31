@@ -1,0 +1,14 @@
+[Unit]
+Description=eapdebugger
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/eapdebugger
+ExecStart=/opt/eapdebugger/eapdebugger.rb
+ProtectSystem=full
+PrivateDevices=true
+PrivateTmp=false
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
