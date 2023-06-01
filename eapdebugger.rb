@@ -94,7 +94,12 @@ cap.stream.each do |p|
     end
     outputfile = PacketFu::PcapNG::File.new
     packets = [pkt]
-    pcap_file_name = File.join('packets', "broken_#{@config[:org_name]}_#{DateTime.now.strftime('%s')}.pcap")
+    filename = "broken_#{@config[:org_name]}_#{DateTime.now.strftime('%s')}"
+    file_id = 0
+    begin
+      pcap_file_name = File.join('packets', "#{filename}_#{file_id}.pcap")
+      file_id += 1
+    end while File.exists?(pcap_file_name)
     outputfile.array_to_file(array: packets, file: pcap_file_name)
     logger.info "Saving RADIUS packet with broken EAP (ID #{rp.identifier}) to #{pcap_file_name}"
   rescue StandardError => e
