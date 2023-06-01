@@ -34,7 +34,38 @@ include PacketFu
 
 logger.info('Start packet capture')
 
+@deduplication = []
+
 cap = PacketFu::Capture.new(iface: @config[:iface], start: true, filter: "port #{@config[:port] || 1812}")
+
+def deduplicate(radius_packet)
+
+  to_delete = []
+  @deduplication.each do |dedup|
+    if dedup[:last_seen] + 30 < Time.now
+      to_delete << dedup
+      next
+    end
+    next if dedup[:id] != radius_packet.identifier
+    next if dedup[:auth] != radius_packet.authenticator
+    next if dedup[:udp] != radius_packet.udp
+
+    dedup[:last_seen] = Time.now
+    return true
+  end
+
+  to_delete.each do |t|
+    @deduplication.delete t
+  end
+
+  @deduplication << {
+    id: radius_packet.identifier,
+    auth: radius_packet.authenticator,
+    udp: radius_packet.udp,
+    last_seen: Time.now
+  }
+  return false
+end
 
 cap.stream.each do |p|
   logger.trace('Packet captured.')
@@ -57,11 +88,15 @@ cap.stream.each do |p|
     rp.parse_eap!
   rescue PreliminaryEAPParsingError => e
     logger.debug 'Found broken EAP packet'
+    if deduplicate(rp)
+      logger.info "Found duplicate packet with ID #{rp.identifier}. Not saving."
+      next
+    end
     outputfile = PacketFu::PcapNG::File.new
     packets = [pkt]
     pcap_file_name = File.join('packets', "broken_#{@config[:org_name]}_#{DateTime.now.strftime('%s')}.pcap")
     outputfile.array_to_file(array: packets, file: pcap_file_name)
-    logger.info "Saving RADIUS packet with broken EAP to #{pcap_file_name}"
+    logger.info "Saving RADIUS packet with broken EAP (ID #{rp.identifier}) to #{pcap_file_name}"
   rescue StandardError => e
     next
   end
